@@ -280,18 +280,3 @@ class PromptEvaluator:
                 avg_score = sum(self.scorer.weighted_total(r.score) for r in results) / len(results)
                 logger.info(f"Average score for model '{model}': {avg_score:.4f}")
         return all_results
-
-# Patch for backwards compatibility for get_evaluated_prompt_ids and scorer's set_weights/get_weights
-if not hasattr(DatabaseManager, "get_evaluated_prompt_ids"):
-    def _fallback_get_evaluated_prompt_ids(self, dataset_name: str, model: str):
-        rows = self.connection.execute(
-            "SELECT prompt_id, model FROM evaluation_results WHERE dataset=? AND model=?;",
-            (dataset_name, model)
-        ).fetchall()
-        return set((str(r[0]), r[1]) for r in rows)
-    setattr(DatabaseManager, "get_evaluated_prompt_ids", _fallback_get_evaluated_prompt_ids)
-
-if not hasattr(ScoringEngine, "get_weights"):
-    setattr(ScoringEngine, "get_weights", lambda self: getattr(self, "_weights", {}))
-if not hasattr(ScoringEngine, "set_weights"):
-    setattr(ScoringEngine, "set_weights", lambda self, w: setattr(self, "_weights", w))

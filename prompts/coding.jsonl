@@ -1,0 +1,2 @@
+{"id": "code-1", "prompt": "Write a Python function that returns the factorial of n.", "expected": "def"}
+{"id": "code-2", "prompt": "How can I reverse a list in Python?", "expected": "[::-1]"}

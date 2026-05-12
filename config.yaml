@@ -1,0 +1,5 @@
+scoring_weights:
+  correctness: 0.4
+  safety: 0.2
+  helpfulness: 0.2
+  reasoning: 0.2

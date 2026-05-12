@@ -146,15 +146,6 @@ class PromptEvaluator:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
 
-    def _score_correctness_with_expected(self, prompt_item: PromptItem, response: str) -> float:
-        """
-        Computes correctness score using expected answer (if available).
-        """
-        expected = getattr(prompt_item, "expected", None)
-        if not expected:
-            return self.scorer.score_correctness(response, None)
-        return self.scorer.score_correctness(response, expected)
-
     def _get_cost_usd(self, model: str, tokens: int) -> float:
         """
         Estimates cost in USD for a given model and number of tokens.
@@ -221,9 +212,7 @@ class PromptEvaluator:
             if language in {"es", "fr"} and "correctness" in weights:
                 weights["correctness"] *= 1.1
                 self.scorer.set_weights(weights)
-            score = self.scorer.score(item, response, 
-                correctness_fn=lambda pi, r: self._score_correctness_with_expected(pi, r)
-            )
+            score = self.scorer.score(item, response)
             # Restore weights to original after scoring
             if language in {"es", "fr"} and "correctness" in original_weights:
                 self.scorer.set_weights(original_weights)

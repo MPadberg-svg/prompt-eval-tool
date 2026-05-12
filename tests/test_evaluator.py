@@ -31,14 +31,13 @@ def test_prompt_evaluator_stores_results(tmp_path):
         "scoring_weights:\n  correctness: 0.4\n  safety: 0.2\n  helpfulness: 0.2\n  reasoning: 0.2\n"
     )
 
-    evaluator = PromptEvaluator(
+    with PromptEvaluator(
         db_path=db_path,
         config_path=config_path,
-        response_generator=lambda _model, prompt: f"Because {prompt} 4",
-    )
-
-    results = evaluator.evaluate_dataset(dataset, model="gpt-4")
-    rows = evaluator.db.fetch_results()
+        response_generator=lambda model, prompt: f"Because {prompt} 4",
+    ) as evaluator:
+        results = evaluator.evaluate_dataset(dataset, model="gpt-4")
+        rows = evaluator.db.fetch_results()
 
     assert len(results) == 2
     assert len(rows) == 2

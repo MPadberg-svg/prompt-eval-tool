@@ -28,6 +28,8 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+Requires Python 3.10+.
+
 ## Usage
 
 Set API key:

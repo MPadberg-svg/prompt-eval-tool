@@ -23,10 +23,10 @@ def cli() -> None:
 @click.option("--limit", type=int, default=None)
 def evaluate(datasets: tuple[str, ...], model: str, db_path: str, config_path: str, limit: int | None) -> None:
     """Evaluate one or multiple prompt datasets."""
-    evaluator = PromptEvaluator(db_path=db_path, config_path=config_path)
-    summary = evaluator.evaluate_batch(datasets, model=model, limit=limit)
-    for dataset, count in summary.items():
-        click.echo(f"Evaluated {count} prompts from {dataset}")
+    with PromptEvaluator(db_path=db_path, config_path=config_path) as evaluator:
+        summary = evaluator.evaluate_batch(datasets, model=model, limit=limit)
+        for dataset, count in summary.items():
+            click.echo(f"Evaluated {count} prompts from {dataset}")
 
 
 @cli.command()
@@ -36,12 +36,12 @@ def evaluate(datasets: tuple[str, ...], model: str, db_path: str, config_path: s
 @click.option("--dataset", default=None)
 def export(db_path: str, output: str, fmt: str, dataset: str | None) -> None:
     """Export evaluation results."""
-    db = DatabaseManager(db_path)
     output_path = Path(output)
-    if fmt == "csv":
-        db.export_csv(output_path, dataset=dataset)
-    else:
-        db.export_jsonl(output_path, dataset=dataset)
+    with DatabaseManager(db_path) as db:
+        if fmt == "csv":
+            db.export_csv(output_path, dataset=dataset)
+        else:
+            db.export_jsonl(output_path, dataset=dataset)
     click.echo(f"Exported {fmt} to {output}")
 
 

@@ -41,7 +41,10 @@ def load_jsonl_dataset(dataset_path: str | Path) -> List[PromptItem]:
             record = json.loads(line)
             prompt = record.get("prompt")
             if not prompt:
-                raise ValueError(f"Missing 'prompt' in {dataset_path} line {idx}")
+                raise ValueError(
+                    f"Missing 'prompt' in {str(dataset_path)}, line {idx}. "
+                    f"Found keys: {sorted(record.keys())}"
+                )
             items.append(
                 PromptItem(
                     prompt_id=str(record.get("id", idx)),
@@ -68,6 +71,15 @@ class PromptEvaluator:
             self.response_generator = live_generator.generate
         else:
             self.response_generator = response_generator
+
+    def close(self) -> None:
+        self.db.close()
+
+    def __enter__(self) -> "PromptEvaluator":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
 
     def evaluate_dataset(
         self,

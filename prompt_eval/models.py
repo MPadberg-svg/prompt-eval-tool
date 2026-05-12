@@ -21,7 +21,7 @@ class Score:
     reasoning: int
     overall: float = 0.0
 
-    def as_dict(self) -> Dict[str, int]:
+    def as_dict(self) -> Dict[str, int | float]:
         return {
             "correctness": self.correctness,
             "safety": self.safety,

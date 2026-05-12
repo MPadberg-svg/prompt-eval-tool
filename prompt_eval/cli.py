@@ -26,6 +26,13 @@ def cli() -> None:
     """Prompt evaluation CLI."""
 
 
+@cli.command("list-models")
+def list_models() -> None:
+    """List supported model names."""
+    for model in SUPPORTED_MODELS:
+        click.echo(model)
+
+
 @cli.command()
 @click.option("--dataset", "datasets", type=click.Path(exists=True), required=True, multiple=True)
 @click.option("--model", default="gpt-4", type=click.Choice(SUPPORTED_MODELS))

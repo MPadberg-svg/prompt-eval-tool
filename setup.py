@@ -23,8 +23,8 @@ setup(
         "langdetect>=1.0.9",
         "requests>=2.31.0",
         "python-dotenv>=1.0.0",
-        "pytest>=8.0.0",
     ],
+    extras_require={"dev": ["pytest>=8.0.0"]},
     entry_points={"console_scripts": ["prompt-eval=prompt_eval.cli:cli"]},
     python_requires=">=3.10",
     classifiers=[

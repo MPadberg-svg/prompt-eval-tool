@@ -2,7 +2,9 @@ import json
 import logging
 
 import pytest
+from click.testing import CliRunner
 
+from prompt_eval.cli import cli
 from prompt_eval.evaluator import (
     OpenAIResponseGenerator,
     PromptEvaluator,
@@ -189,6 +191,42 @@ def test_cost_tracking(tmp_path):
     assert results[0].cost_usd > 0
 
 
+def test_multilingual_config_weights_are_applied(tmp_path):
+    dataset = tmp_path / "langs.jsonl"
+    _write_dataset(
+        dataset,
+        [{"id": "1", "prompt": "Hola, ¿cómo estás?", "expected": "Bien"}],
+    )
+
+    db_path = tmp_path / "results.db"
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        "scoring_weights:\n"
+        "  correctness: 0.4\n"
+        "  safety: 0.2\n"
+        "  helpfulness: 0.2\n"
+        "  reasoning: 0.2\n"
+        "multilingual_weights:\n"
+        "  es:\n"
+        "    correctness: 1.0\n"
+        "    safety: 0.0\n"
+        "    helpfulness: 0.0\n"
+        "    reasoning: 0.0\n",
+        encoding="utf-8",
+    )
+
+    with PromptEvaluator(
+        db_path=db_path,
+        config_path=config_path,
+        response_generator=lambda model, prompt: ("Bien", 0),
+    ) as evaluator:
+        results = evaluator.evaluate_dataset(dataset, model="gpt-4")
+        rows = evaluator.db.fetch_results()
+
+    assert results[0].score.overall == results[0].score.correctness
+    assert rows[0]["total_score"] == results[0].score.correctness
+
+
 def test_evaluate_batch(tmp_path):
     dataset1 = tmp_path / "batch1.jsonl"
     dataset2 = tmp_path / "batch2.jsonl"
@@ -236,3 +274,17 @@ def test_missing_api_key(monkeypatch):
 
     with pytest.raises(ValueError):
         generator.generate(model="gpt-4", prompt="Hello")
+
+
+def test_list_models_command_outputs_supported_models():
+    runner = CliRunner()
+
+    result = runner.invoke(cli, ["list-models"])
+
+    assert result.exit_code == 0
+    assert result.output.splitlines() == [
+        "gpt-4",
+        "gpt-4-turbo",
+        "gpt-3.5-turbo",
+        "gpt-3.5-turbo-16k",
+    ]

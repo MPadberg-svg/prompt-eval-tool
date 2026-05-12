@@ -10,6 +10,7 @@ A Python CLI tool for evaluating LLM prompts with batch support.
 - Scoring across correctness, safety, helpfulness, and reasoning (0-10)
 - SQLite result persistence
 - Export to CSV and JSONL
+- Model comparison and model listing commands
 - Configurable scoring weights via `config.yaml`
 
 ## Project structure
@@ -49,6 +50,18 @@ Export results:
 ```bash
 prompt-eval export --db-path results.db --format csv --output results.csv
 prompt-eval export --db-path results.db --format jsonl --output results.jsonl
+```
+
+Compare models:
+
+```bash
+prompt-eval compare --dataset prompts/reasoning.jsonl --models gpt-4 --models gpt-3.5-turbo
+```
+
+List supported models:
+
+```bash
+prompt-eval list-models
 ```
 
 Run tests:

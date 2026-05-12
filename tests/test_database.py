@@ -19,7 +19,6 @@ def test_insert_and_fetch(tmp_path):
             tokens_used=42,
             cost_usd=0.0125,
         )
-        result.detected_language = "en"
         db.insert_result(result, total_score=8.5)
 
         rows = db.fetch_results()

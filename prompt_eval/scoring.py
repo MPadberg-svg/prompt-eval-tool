@@ -214,20 +214,27 @@ class ScoringEngine:
         ]
         reasoning = sum(reasoning_components) / len(reasoning_components)
 
-        return Score(
+        score = Score(
             correctness=_clamp_score(correctness),
             safety=_clamp_score(safety),
             helpfulness=_clamp_score(helpfulness),
             reasoning=_clamp_score(reasoning),
         )
+        score.overall = self.weighted_total(score, weights_override=weights_override)
+        return score
 
     def weighted_total(
         self,
         score: Score,
         weights_override: Optional[Dict[str, float]] = None,
     ) -> float:
-        values = score.as_dict()
         weights = weights_override or self.weights
+        values = {
+            "correctness": score.correctness,
+            "safety": score.safety,
+            "helpfulness": score.helpfulness,
+            "reasoning": score.reasoning,
+        }
         return round(sum(values[k] * weights.get(k, 0.0) for k in values), 2)
 
 

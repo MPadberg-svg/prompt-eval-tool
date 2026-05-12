@@ -5,10 +5,10 @@ import os
 import time
 import logging
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Any, DefaultDict
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 from langdetect import detect
-from collections import defaultdict, Counter
+from collections import Counter
 
 from .database import DatabaseManager
 from .models import EvaluationResult, PromptItem
@@ -64,6 +64,34 @@ def _load_temperature_from_config(config_path: str | Path) -> float:
         except Exception:
             return 0.0
 
+
+def _load_multilingual_weights_from_config(
+    config_path: str | Path,
+) -> Dict[str, Dict[str, float]]:
+    import yaml
+
+    path = Path(config_path)
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        try:
+            config = yaml.safe_load(f) or {}
+        except Exception:
+            return {}
+
+    multilingual_weights = config.get("multilingual_weights") or {}
+    allowed_keys = {"correctness", "safety", "helpfulness", "reasoning"}
+    normalized: Dict[str, Dict[str, float]] = {}
+    for language, weights in multilingual_weights.items():
+        if not isinstance(weights, dict):
+            continue
+        normalized[str(language)] = {
+            key: float(value)
+            for key, value in weights.items()
+            if key in allowed_keys
+        }
+    return normalized
+
 class OpenAIResponseGenerator:
     def __init__(self, api_key: Optional[str] = None, temperature: float = 0.0):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -82,7 +110,7 @@ class OpenAIResponseGenerator:
 
             self.client = OpenAI(api_key=self.api_key)
 
-        from openai.error import RateLimitError, APIError
+        from openai import APIError, RateLimitError
 
         max_attempts = 3
         backoff = [1, 2, 4]
@@ -130,6 +158,7 @@ class PromptEvaluator:
         self.temperature = _load_temperature_from_config(config_path)
         weights = load_weights(config_path)
         self.scorer = ScoringEngine(weights)
+        self.multilingual_weights = _load_multilingual_weights_from_config(config_path)
         self.db = DatabaseManager(db_path)
         if response_generator is None:
             live_generator = OpenAIResponseGenerator(temperature=self.temperature)
@@ -206,16 +235,15 @@ class PromptEvaluator:
             cost_usd = self._get_cost_usd(model, tokens)
             total_cost += cost_usd
 
-            # Multilingual: If language is es or fr, boost correctness weight
             original_weights = self.scorer.get_weights()
-            weights = dict(original_weights)
-            if language in {"es", "fr"} and "correctness" in weights:
-                weights["correctness"] *= 1.1
+            language_weights = self.multilingual_weights.get(language or "")
+            active_weights = original_weights
+            if language_weights:
+                weights = dict(original_weights)
+                weights.update(language_weights)
+                active_weights = weights
                 self.scorer.set_weights(weights)
             score = self.scorer.score(item, response)
-            # Restore weights to original after scoring
-            if language in {"es", "fr"} and "correctness" in original_weights:
-                self.scorer.set_weights(original_weights)
 
             result = EvaluationResult(
                 dataset=dataset_name,
@@ -226,7 +254,9 @@ class PromptEvaluator:
                 tokens_used=tokens,
                 cost_usd=cost_usd,
             )
-            total = self.scorer.weighted_total(score)
+            total = self.scorer.weighted_total(score, weights_override=active_weights)
+            if language_weights:
+                self.scorer.set_weights(original_weights)
             self.db.insert_result(result, total_score=total)
             results.append(result)
 

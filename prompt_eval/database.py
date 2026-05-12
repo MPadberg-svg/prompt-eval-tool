@@ -58,7 +58,7 @@ class DatabaseManager:
     def insert_result(self, result: EvaluationResult, total_score: float) -> None:
         tokens_used = getattr(result, "tokens_used", None)
         cost_usd = getattr(result, "cost_usd", None)
-        detected_language = getattr(result, "detected_language", None)
+        detected_language = getattr(result.prompt_item, "detected_language", None)
         self.conn.execute(
             """
             INSERT INTO evaluations (

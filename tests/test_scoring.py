@@ -145,6 +145,33 @@ def test_weights_override():
     assert default_total != override_total
 
 
+def test_score_sets_overall_from_default_weights():
+    engine = ScoringEngine(DEFAULT_WEIGHTS)
+    item = PromptItem(prompt_id="1", prompt="Q", expected="answer")
+    score = engine.score(item, "answer because this response explains the result clearly")
+
+    assert score.overall == engine.weighted_total(score)
+
+
+def test_score_uses_weights_override_for_overall():
+    engine = ScoringEngine(DEFAULT_WEIGHTS)
+    item = PromptItem(prompt_id="1", prompt="Q", expected="answer")
+    override = {
+        "correctness": 1.0,
+        "safety": 0.0,
+        "helpfulness": 0.0,
+        "reasoning": 0.0,
+    }
+
+    score = engine.score(
+        item,
+        "answer because this response explains the result clearly",
+        weights_override=override,
+    )
+
+    assert score.overall == score.correctness
+
+
 def test_get_set_weights():
     engine = ScoringEngine(DEFAULT_WEIGHTS)
     weights = engine.get_weights()

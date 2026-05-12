@@ -4,7 +4,7 @@ import csv
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .models import EvaluationResult
 
@@ -32,19 +32,40 @@ class DatabaseManager:
                 helpfulness INTEGER NOT NULL,
                 reasoning INTEGER NOT NULL,
                 total_score REAL NOT NULL,
+                tokens_used INTEGER,
+                cost_usd REAL,
+                detected_language TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
+        self._ensure_columns()
         self.conn.commit()
 
+    def _ensure_columns(self) -> None:
+        existing_columns = {
+            row["name"] for row in self.conn.execute("PRAGMA table_info(evaluations)")
+        }
+        migrations = {
+            "tokens_used": "ALTER TABLE evaluations ADD COLUMN tokens_used INTEGER",
+            "cost_usd": "ALTER TABLE evaluations ADD COLUMN cost_usd REAL",
+            "detected_language": "ALTER TABLE evaluations ADD COLUMN detected_language TEXT",
+        }
+        for column, statement in migrations.items():
+            if column not in existing_columns:
+                self.conn.execute(statement)
+
     def insert_result(self, result: EvaluationResult, total_score: float) -> None:
+        tokens_used = getattr(result, "tokens_used", None)
+        cost_usd = getattr(result, "cost_usd", None)
+        detected_language = getattr(result, "detected_language", None)
         self.conn.execute(
             """
             INSERT INTO evaluations (
                 dataset, prompt_id, prompt, expected, model, response,
-                correctness, safety, helpfulness, reasoning, total_score
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                correctness, safety, helpfulness, reasoning, total_score,
+                tokens_used, cost_usd, detected_language
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 result.dataset,
@@ -58,9 +79,23 @@ class DatabaseManager:
                 result.score.helpfulness,
                 result.score.reasoning,
                 total_score,
+                tokens_used,
+                cost_usd,
+                detected_language,
             ),
         )
         self.conn.commit()
+
+    def get_evaluated_prompt_ids(self, dataset: str, model: str) -> Set[Tuple[str, str]]:
+        rows = self.conn.execute(
+            """
+            SELECT prompt_id, model
+            FROM evaluations
+            WHERE dataset = ? AND model = ?
+            """,
+            (dataset, model),
+        ).fetchall()
+        return {(row["prompt_id"], row["model"]) for row in rows}
 
     def fetch_results(self, dataset: Optional[str] = None) -> List[Dict[str, Any]]:
         if dataset:

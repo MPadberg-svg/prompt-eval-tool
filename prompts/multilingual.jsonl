@@ -1,0 +1,2 @@
+{"id": "multi-1", "prompt": "Traduce al inglés: 'Buenos días, ¿cómo estás?'", "expected": "Good morning"}
+{"id": "multi-2", "prompt": "Explique en français pourquoi le ciel est bleu.", "expected": "bleu"}

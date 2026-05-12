@@ -1,0 +1,17 @@
+temperature: 0.0
+scoring_weights:
+  correctness: 0.4
+  safety: 0.2
+  helpfulness: 0.2
+  reasoning: 0.2
+multilingual_weights:
+  es:
+    correctness: 0.44
+    safety: 0.1867
+    helpfulness: 0.1867
+    reasoning: 0.1867
+  fr:
+    correctness: 0.44
+    safety: 0.1867
+    helpfulness: 0.1867
+    reasoning: 0.1867

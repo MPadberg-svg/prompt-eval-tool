@@ -230,10 +230,9 @@ class ScoringEngine:
     ) -> float:
         weights = weights_override or self.weights
         values = {
-            "correctness": score.correctness,
-            "safety": score.safety,
-            "helpfulness": score.helpfulness,
-            "reasoning": score.reasoning,
+            key: value
+            for key, value in score.as_dict().items()
+            if key != "overall"
         }
         return round(sum(values[k] * weights.get(k, 0.0) for k in values), 2)
 
